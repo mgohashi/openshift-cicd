@@ -1,0 +1,34 @@
+oc new-project api-city-backend-dev --display-name "API City Backend DEV"
+
+oc policy add-role-to-user edit system:serviceaccount:cicd-tool:jenkins -n api-city-backend-dev
+
+oc new-build --binary=true --name="api-city" fis-java-openshift:2.0
+
+oc new-app api-city-backend-dev/api-city:TestingCandidate-1.0 --name=api-city --allow-missing-imagestream-tags=true -lapp=api-city
+
+oc set triggers dc/api-city --remove-all
+
+oc expose dc api-city --port 8080
+
+oc expose svc api-city
+
+oc new-project api-city-backend-prod --display-name "API City Backend Production"
+
+oc policy add-role-to-group system:image-puller system:serviceaccounts:api-city-backend-prod -n api-city-backend-dev
+
+oc policy add-role-to-user edit system:serviceaccount:cicd-tool:jenkins -n api-city-backend-prod
+
+oc new-app -i api-city-backend-dev/api-city:ProdReady-1.0 --name=api-city-green --allow-missing-imagestream-tags=true -lapp=api-city
+
+oc new-app -i api-city-backend-dev/api-city:ProdReady-1.0 --name=api-city-blue --allow-missing-imagestream-tags=true -lapp=api-city
+
+oc set triggers dc/api-city-green --remove-all
+
+oc set triggers dc/api-city-blue --remove-all
+
+oc expose dc api-city-blue --port 8080
+
+oc expose dc api-city-green --port 8080
+
+oc expose svc/api-city-green --name api-city
+
